@@ -22,15 +22,15 @@
 //PROTOTYPES
 //
 /// @brief INIT WI-FI STATION WITH DEFAULT CONFIGURATION
-esp_err_t wifiInitAp(void);
+esp_err_t WifiInitAp(void);
 
 /// @brief SEND TASK OVER VIRTUAL-LINK
 /// @param param VIRTUAL-LINK PARAMETERS
-void vlSendTask(void *param);
+void VlSendTask(void *param);
 
 //FUNCTIONS
 
-esp_err_t wifiInitAp(void)
+esp_err_t WifiInitAp(void)
 {
     esp_netif_create_default_wifi_ap();
     wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
@@ -54,7 +54,7 @@ esp_err_t wifiInitAp(void)
     return ESP_OK;
 }
 
-void vlSendTask(void *param)
+void VlSendTask(void *param)
 {
     VirtualLink_t *virtualLink = (VirtualLink_t *)param;
 
@@ -75,13 +75,20 @@ void vlSendTask(void *param)
     
     AfdxFrame_t frame;
     char payload[50];
-
+    int missionCode = 101;
+    float altitude = 5000.0f;
     TickType_t lastWakeTime = xTaskGetTickCount();
 
     while (true)
-    {
-        snprintf(payload, sizeof(payload), "Data from VL %d", virtualLink->id);
+    {        
+        uint32_t timeMs = esp_timer_get_time()/1000;
+
+        altitude += 10.0f;
+        if (altitude > 10000.0f) altitude = 5000.0f;
+
+        snprintf(payload, sizeof(payload), "M%03d|ALT:%.1fm|T:%lu", missionCode, altitude, timeMs);
         AfdxCreateFrame(&frame, virtualLink->id, payload);
+        AfdxPrintFrame(&frame);
 
         int err = sendto(sock, &frame, sizeof(frame), 0, (struct sockaddr *)&destAddr, sizeof(destAddr));
         if (err < 0)
@@ -111,10 +118,12 @@ void app_main(void)
 
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
-    ESP_ERROR_CHECK(wifiInitAp());
+    ESP_ERROR_CHECK(WifiInitAp());
+
+    crc32Init();
 
     for (int i = 0; i < VL_COUNT; i++)
     {
-        xTaskCreate(vlSendTask, vlTable[i].name, 4096, &vlTable[i], vlTable[i].priority, NULL);
+        xTaskCreate(VlSendTask, vlTable[i].name, 4096, &vlTable[i], vlTable[i].priority, NULL);
     }
 }

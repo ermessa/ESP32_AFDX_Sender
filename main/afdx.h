@@ -9,6 +9,7 @@ typedef struct
     uint16_t id;        //VIRTUAL LINK ID
     uint32_t timestamp; //TIMESTAMP IN MILISSECONDS
     char payload[50];   //FRAME DATA
+    uint32_t crc32;     //CHECKSUM
 }AfdxFrame_t;
 
 /// @brief FUNCTION TO CREATE AN AFDX FRAME
@@ -16,5 +17,7 @@ typedef struct
 /// @param vlId AFDX ID
 /// @param data DATA TO SEND
 void AfdxCreateFrame(AfdxFrame_t *frame, uint16_t vlId, const char *data);
+
+void AfdxPrintFrame(const AfdxFrame_t *frame);
 
 #endif
