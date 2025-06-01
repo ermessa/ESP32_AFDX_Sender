@@ -18,6 +18,8 @@ typedef struct
 /// @param data DATA TO SEND
 void AfdxCreateFrame(AfdxFrame_t *frame, uint16_t vlId, const char *data);
 
+/// @brief PRINT AFDX STRUCTURE FIELDS
+/// @param frame FRAME STRUCTURE POINTER
 void AfdxPrintFrame(const AfdxFrame_t *frame);
 
 #endif

@@ -15,7 +15,10 @@ typedef struct
     uint8_t priority;
 } VirtualLink_t;
 
+/// @brief VIRTUAL-LINK TABLE FOLLOWING VIRTUAL-LINK STRUCTURE
 extern VirtualLink_t vlTable[];
+
+/// @brief ELEMENTS NUMBER IN THE ARRAY
 extern const int VL_COUNT;
 
 #endif

@@ -27,6 +27,6 @@ void AfdxPrintFrame(const AfdxFrame_t *frame)
     printf("VL ID       : %u\n", frame->id);
     printf("timestamp   : %lu ms\n", frame->timestamp);
     printf("payload     : %s\n", frame->payload);
-    printf("checksum    : 0x%08X\n", frame->crc32);
+    printf("checksum    : 0x%lx\n", frame->crc32);
     printf("----------------------------------------\n");
 }

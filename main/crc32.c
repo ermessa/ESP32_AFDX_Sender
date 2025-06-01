@@ -1,11 +1,13 @@
 #include "crc32.h"
 
+#define BIT_REVERSED_CRC32 0xEDB88320
+
 static uint32_t crc32Table[256];
 static int tableInitialized = 0;
 
 void crc32Init(void)
 {
-    uint32_t polynomial = 0xEDB88320; //reflected form of 0x04C11DB7 ???????????
+    uint32_t polynomial = BIT_REVERSED_CRC32;
 
     for (uint32_t i = 0; i < 256; i++)
     {
