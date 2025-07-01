@@ -25,6 +25,10 @@
 
 #define MAX_ERR_MSG_LENGTH 128
 
+//GLOBAL VARIABLES
+static uint32_t numCycles = 0;
+static bool start = false;
+
 //PROTOTYPES
 //
 /// @brief INIT WI-FI STATION WITH DEFAULT CONFIGURATION
@@ -34,7 +38,26 @@ esp_err_t WifiInitAp(void);
 /// @param param VIRTUAL-LINK PARAMETERS
 void VlSendTask(void *param);
 
+/// @brief 
+/// @param param 
 void ReceiverErrorHandlerTask(void* param);
+
+/// @brief CREATE AND WRITE TIMESTAMP IN A FILE FOR DEBUG
+/// @param fileName FILENAME WITH EXTENSION
+/// @param timestamp TIME TO PRINT IN THE FILE
+/// @param status STATUS FOR REGISTER
+void WriteFile(char* fileName, int64_t timestamp, char status [32]);
+
+/// @brief 
+void ConfigureStaticIp();
+
+/// @brief CLEAR BUFFER
+void FlushStdin();
+
+/// @brief WAIT SERIAL COMMAND TO ENABLE THE ROUTINE FLOW
+void WaitForStartCommand();
+
+//FUNCTIONS
 
 void ConfigureStaticIp()
 {
@@ -60,8 +83,6 @@ void ConfigureStaticIp()
     ESP_ERROR_CHECK(esp_netif_dhcps_stop(netif));
     ESP_ERROR_CHECK(esp_netif_set_ip_info(netif, &ipInfo));
 }
-
-//FUNCTIONS
 
 esp_err_t WifiInitAp(void)
 {
@@ -108,6 +129,7 @@ void VlSendTask(void *param)
     
     AfdxFrame_t frame;
     char payload[50];
+    char status [32] = "";
     int missionCode = 101;
     float altitude = 5000.0f;
     TickType_t lastWakeTime = xTaskGetTickCount();
@@ -126,13 +148,17 @@ void VlSendTask(void *param)
         int err = sendto(sock, &frame, sizeof(frame), 0, (struct sockaddr *)&destAddr, sizeof(destAddr));
         if (err < 0)
         {
+            snprintf(status, sizeof(status), "PAYLOAD_ERROR_NUM_%d", errno);
             ESP_LOGE(virtualLink->name, "Error to send: errno %d", errno);
         }
         else
         {
+            strcpy(status, "PAYLOAD_SENT");
             ESP_LOGI(virtualLink->name, "Frame sent to  %s:%d", virtualLink->targetIp, virtualLink->port);
         }
-        
+        uint32_t endTime = esp_timer_get_time()/1000;
+        ESP_LOGI("SENDER: VLSENDTASK_TIMESTAMP", "%ld ms", endTime - timeMs);
+        WriteFile("SENDER_LOG", endTime - timeMs, status);
         vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(virtualLink->msPeriod));
     }
     close(sock);
@@ -177,8 +203,43 @@ void ReceiverErrorHandlerTask(void* param)
     vTaskDelete(NULL);
 }
 
+void WriteFile(char* fileName, int64_t timestamp, char status [32])
+{
+    numCycles++;
+    printf("%s|%lld|%s|%ld\n", fileName, timestamp, status, numCycles); 
+}
+
+void FlushStdin()
+{
+    while (getchar() != -1) ;
+}
+
+void WaitForStartCommand()
+{
+    char input[16] = {0};
+    while(!start)
+    {
+        printf("ID=SENDER\n");
+        for (int i = 0; i < 20; i++)
+        {
+            if (fgets(input, sizeof(input), stdin))
+            {
+                if (strncmp(input, "start", 5) == 0)
+                {
+                    start = true;
+                    break;
+                }
+            }
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
+    }
+}
+
 void app_main(void)
 {
+    FlushStdin();
+    WaitForStartCommand();
+
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
